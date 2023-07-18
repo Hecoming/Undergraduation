@@ -12,18 +12,17 @@ A=reshape(A2,A1);B=reshape(B2,B1);
 [keyB,midB,ciphertextB,HVD_plainB,HVD_cipherB,BNPCR]=JCS(B);
 
 function [key0,mid0,ciphertext0,HVD_plain,HVD_cipher,NPCRs]=JCS(image1)%this function provide the method and the indicators
-    p1=imresize(image1,[64 64]);%to shorten the computing time
+    pz=imresize(image1,[64 64]);%to shorten the computing time
     p=sym(int16(p1));
     [key1,ciphertext]=jordan(p);
     [key,mid]=Demo_CS_OMP(key1);%1d compressed sensing,deal data 1by1 row
     key0=real(double(key));
     mid0=real(double(mid));
     ciphertext0=real(double(ciphertext));
-    plaintext0=real(double(p1));
-    histogram(ciphertext0);histogram(plaintext0);%generate histogram of plain and cipher
-    plain_H=Correlation_of_adjacent_pixels(plaintext0,1,200);%Horizontal correlation,the third indicator is the number of parameters
-    plain_V=Correlation_of_adjacent_pixels(plaintext0,2,200);%Vertical correlation
-    plain_D=Correlation_of_adjacent_pixels(plaintext0,3,200);%Diagonal correlation
+    histogram(ciphertext0);histogram(p1);%generate histogram of plain and cipher
+    plain_H=Correlation_of_adjacent_pixels(pz,1,200);%Horizontal correlation,the third indicator is the number of parameters
+    plain_V=Correlation_of_adjacent_pixels(pz,2,200);%Vertical correlation
+    plain_D=Correlation_of_adjacent_pixels(pz,3,200);%Diagonal correlation
     cipher_H=Correlation_of_adjacent_pixels(ciphertext0,1,200);
     cipher_V=Correlation_of_adjacent_pixels(ciphertext0,2,200);
     cipher_D=Correlation_of_adjacent_pixels(ciphertext0,3,200);
@@ -36,7 +35,7 @@ function [key0,mid0,ciphertext0,HVD_plain,HVD_cipher,NPCRs]=JCS(image1)%this fun
     mid00=real(double(midmid));
     ciphertext00=real(double(ciphertext2));
     key_NPCR=NPCR(key0,key00);
-    cipher_NPCR=NPCR(ciphertext0,ciphertext00);
+    cipher_NPCR=NPCRC(ciphertext0,ciphertext00);
     mid_NPCR=NPCR(mid0,mid00);%compute NPCR
     HVD_plain=[plain_H,plain_V,plain_D];HVD_cipher=[cipher_H,cipher_V,cipher_D];
     NPCRs=[key_NPCR,cipher_NPCR,mid_NPCR];
@@ -45,13 +44,14 @@ end
 function [x, y] = splitIntoSquares(n)
     x = 0;
     y = int16(sqrt(n)); 
+    y0=int16(sqrt(n));
     while x <= y 
-        if x^2 + y^2 == n
-            return;
-        elseif x^2 + y^2 < n 
-            x = x + 1;
-        else
-            y = y - 1;
+        for y=y0:(y0/2)
+            for x=0:(y-1)
+                if (x^2+y^2)==n
+                    return
+                end
+            end
         end
     end
     x = -1;
@@ -191,6 +191,20 @@ for i=1:n
 end
 down=sqrt(sum_x*sum_y);
 l=up/down;
+end
+
+function NPC=NPCRC(image1,image2)
+    [iN,jN]=size(image1);
+    m=0;
+    for i=1:iN
+        for j=1:jN
+            if image1(i,j)==image2(i,j) && image1(i,j)~=0
+                m=m+1;
+            end
+        end
+    end
+    ij=iN*jN;
+    NPC=(ij-m)/(ij);
 end
 
 function NPC=NPCR(image1,image2)
